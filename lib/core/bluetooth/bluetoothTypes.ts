@@ -9,13 +9,13 @@ export type ConnectionStatus =
   | 'error';
 
 // ─── Estado del adaptador BT del teléfono ────────────────────
-export type BluetoothAdapterState =
-  | 'unknown'
-  | 'resetting'
-  | 'unsupported'
-  | 'unauthorized'
-  | 'poweredOff'
-  | 'poweredOn';
+export type BluetoothAdapterState = 
+  | 'Unknown' 
+  | 'Resetting' 
+  | 'Unsupported' 
+  | 'Unauthorized' 
+  | 'PoweredOff' 
+  | 'PoweredOn';
 
 // ─── Dispositivo escaneado ────────────────────────────────────
 export interface BluetoothDevice {

@@ -8,12 +8,15 @@ import {
   ConnectedDevice,
   BluetoothError,
   BluetoothAdapterState,
+  ScanOptions,
 } from '@/lib/core/bluetooth/bluetoothTypes';
 
 // ─── Estado interno ───────────────────────────────────────────
 interface UseBluetoothState {
   adapterState: BluetoothAdapterState;
   connectedDevice: ConnectedDevice | null;
+  isScanning: boolean;
+  scannedDevices: BluetoothDevice[];
   isConnecting: boolean;
   isDisconnecting: boolean;
   error: BluetoothError | null;
@@ -22,6 +25,8 @@ interface UseBluetoothState {
 // ─── Return type del hook ─────────────────────────────────────
 interface UseBluetoothReturn extends UseBluetoothState {
   isReady: boolean;
+  startScan: (options?: ScanOptions) => void;
+  stopScan: () => void;
   connect: (device: BluetoothDevice) => Promise<void>;
   disconnect: () => Promise<void>;
   clearError: () => void;
@@ -29,9 +34,10 @@ interface UseBluetoothReturn extends UseBluetoothState {
 
 export function useBluetooth(): UseBluetoothReturn {
   const [state, setState] = useState<UseBluetoothState>({
-    // IMPORTANTE: Coincidir con el tipo BluetoothAdapterState (PascalCase)
     adapterState: 'Unknown', 
     connectedDevice: null,
+    isScanning: false,
+    scannedDevices: [],
     isConnecting: false,
     isDisconnecting: false,
     error: null,
@@ -44,13 +50,18 @@ export function useBluetooth(): UseBluetoothReturn {
     isMounted.current = true;
     return () => {
       isMounted.current = false;
+      bluetoothService.stopScan();
     };
   }, []);
 
   const safeSetState = useCallback(
-    (partial: Partial<UseBluetoothState>) => {
+    (partial: Partial<UseBluetoothState> | ((prev: UseBluetoothState) => UseBluetoothState)) => {
       if (isMounted.current) {
-        setState((prev) => ({ ...prev, ...partial }));
+        if (typeof partial === 'function') {
+          setState(partial);
+        } else {
+          setState((prev) => ({ ...prev, ...partial }));
+        }
       }
     },
     []
@@ -58,13 +69,11 @@ export function useBluetooth(): UseBluetoothReturn {
 
   // ─── Escuchar estado del adaptador ──────────────────────────
   useEffect(() => {
-    // Suscripción al cambio de estado (PoweredOn, PoweredOff, etc.)
     const unsubscribe = bluetoothService.onAdapterStateChange((newState: State) => {
       safeSetState({ adapterState: newState as BluetoothAdapterState });
 
-      // Si el Bluetooth se apaga, desconectamos visualmente el dispositivo
       if (newState !== State.PoweredOn) {
-        safeSetState({ connectedDevice: null });
+        safeSetState({ connectedDevice: null, isScanning: false });
       }
     });
 
@@ -73,18 +82,51 @@ export function useBluetooth(): UseBluetoothReturn {
     };
   }, [safeSetState]);
 
+  // ─── Escaneo ────────────────────────────────────────────────
+  const startScan = useCallback((options?: ScanOptions) => {
+    if (state.isScanning || state.adapterState !== 'PoweredOn') return;
+
+    safeSetState({ isScanning: true, scannedDevices: [], error: null });
+
+    bluetoothService.startScan(
+      (device) => {
+        safeSetState((prev) => {
+          // Si el dispositivo ya está en la lista, lo actualizamos (por el RSSI)
+          const index = prev.scannedDevices.findIndex((d) => d.id === device.id);
+          if (index !== -1) {
+            const newList = [...prev.scannedDevices];
+            newList[index] = device;
+            return { ...prev, scannedDevices: newList };
+          }
+          // Si es nuevo, lo añadimos
+          return { ...prev, scannedDevices: [...prev.scannedDevices, device] };
+        });
+      },
+      (error) => {
+        safeSetState({ error, isScanning: false });
+      },
+      options
+    );
+  }, [state.isScanning, state.adapterState, safeSetState]);
+
+  const stopScan = useCallback(() => {
+    bluetoothService.stopScan();
+    safeSetState({ isScanning: false });
+  }, [safeSetState]);
+
   // ─── Conectar ───────────────────────────────────────────────
   const connect = useCallback(
     async (device: BluetoothDevice) => {
-      // Evitar múltiples intentos de conexión simultáneos
       if (state.isConnecting || state.connectedDevice) return;
+
+      // Detener el escaneo al intentar conectar para mayor estabilidad
+      stopScan();
 
       safeSetState({ isConnecting: true, error: null });
 
       try {
         const connected = await bluetoothService.connect(
           device.id,
-          // Callback de desconexión inesperada (p. ej. se alejó el dispositivo)
           (error) => {
             safeSetState({
               connectedDevice: null,
@@ -104,7 +146,7 @@ export function useBluetooth(): UseBluetoothReturn {
         safeSetState({ isConnecting: false });
       }
     },
-    [state.isConnecting, state.connectedDevice, safeSetState]
+    [state.isConnecting, state.connectedDevice, safeSetState, stopScan]
   );
 
   // ─── Desconectar ────────────────────────────────────────────
@@ -130,8 +172,9 @@ export function useBluetooth(): UseBluetoothReturn {
 
   return {
     ...state,
-    // Verificamos contra el valor exacto de la librería
     isReady: state.adapterState === 'PoweredOn',
+    startScan,
+    stopScan,
     connect,
     disconnect,
     clearError,

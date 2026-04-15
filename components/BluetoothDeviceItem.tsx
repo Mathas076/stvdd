@@ -13,10 +13,6 @@ interface BluetoothDeviceItemProps {
   onDisconnect?: () => void;
 }
 
-/**
- * Molécula: BluetoothDeviceItem
- * Combina átomos (Texto, Botones, Iconos) para representar un dispositivo Bluetooth individual.
- */
 const BluetoothDeviceItem = ({
   device,
   isConnecting = false,
@@ -25,19 +21,17 @@ const BluetoothDeviceItem = ({
   onDisconnect,
 }: BluetoothDeviceItemProps) => {
   
-  // Lógica para determinar el color del icono de señal basado en el RSSI
   const getSignalColor = (rssi: number | null) => {
-    if (!rssi) return '#9CA3AF'; // Gris si no hay señal
-    if (rssi > -60) return '#10B981'; // Verde fuerte
-    if (rssi > -80) return '#F59E0B'; // Ámbar
-    return '#EF4444'; // Rojo (señal débil)
+    if (!rssi) return '#9CA3AF';
+    if (rssi > -60) return '#10B981';
+    if (rssi > -80) return '#F59E0B';
+    return '#EF4444';
   };
 
   const signalColor = getSignalColor(device.rssi);
 
   return (
     <View style={styles.container}>
-      {/* Icono de Señal (Átomo de Icono) */}
       <View style={styles.iconContainer}>
         <Ionicons 
           name={isConnected ? "bluetooth" : "bluetooth-outline"} 
@@ -51,7 +45,6 @@ const BluetoothDeviceItem = ({
         )}
       </View>
 
-      {/* Información del Dispositivo (Átomos de Texto) */}
       <View style={styles.infoContainer}>
         <CustomText variant="subtitle" numberOfLines={1} style={styles.deviceName}>
           {device.name || 'Dispositivo Desconocido'}
@@ -61,7 +54,6 @@ const BluetoothDeviceItem = ({
         </CustomText>
       </View>
 
-      {/* Acción (Átomo de Botón) */}
       <View style={styles.actionContainer}>
         {isConnecting ? (
           <ActivityIndicator size="small" color="#2563EB" />
@@ -98,12 +90,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    // Sombra sutil
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
   iconContainer: {
     alignItems: 'center',
@@ -126,7 +112,6 @@ const styles = StyleSheet.create({
   deviceId: {
     fontSize: 12,
     color: '#6B7280',
-    fontFamily: 'monospace',
   },
   actionContainer: {
     marginLeft: 12,

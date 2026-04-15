@@ -43,7 +43,11 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ], 
+      ["react-native-ble-plx", {
+        "isBackgroundEnabled": false,
+        "modes": ["peripheral", "central"]
+      }]
     ],
     "experiments": {
       "typedRoutes": true,

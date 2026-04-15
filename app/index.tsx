@@ -1,15 +1,23 @@
-import { Text, View } from "react-native";
+import { View, StyleSheet, SafeAreaView, StatusBar } from "react-native";
+import BluetoothScanner from "@/components/BluetoothScanner";
 
 export default function Index() {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text>Edit app/index.tsx to edit this screen.</Text>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <View style={styles.container}>
+        <BluetoothScanner />
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+  },
+  container: {
+    flex: 1,
+  },
+});
